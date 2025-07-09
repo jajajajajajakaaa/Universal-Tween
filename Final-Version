@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 getgenv().TweenConfig = getgenv().TweenConfig or {
@@ -10,6 +11,37 @@ getgenv().TweenConfig = getgenv().TweenConfig or {
 local pos1 = getgenv().TweenConfig.Pos1
 local pos2 = getgenv().TweenConfig.Pos2
 local tweening = false
+
+local function makeDraggable(frame)
+	local dragging, dragInput, dragStart, startPos
+
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
 
 local function createGUI()
 	local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -40,9 +72,9 @@ local function createGUI()
 	mainFrame.Position = UDim2.new(0, 20, 0.5, -110)
 	mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	mainFrame.BorderSizePixel = 0
-	mainFrame.Active = true
-	mainFrame.Draggable = true
 	mainFrame.Name = "MainFrame"
+
+	makeDraggable(mainFrame)
 
 	local function createButton(name, text, posY)
 		local btn = Instance.new("TextButton", mainFrame)
@@ -131,7 +163,7 @@ end
 
 -- Key system (XOR obfuscated)
 local function showKeyPrompt()
-	local decode = function(str, key)
+	local function decode(str, key)
 		local decoded = ""
 		for i = 1, #str do
 			local c = string.byte(str, i)
@@ -141,8 +173,9 @@ local function showKeyPrompt()
 		return decoded
 	end
 
-	local encryptedKey = "\27\10\12\00\00" -- XOR of "pixel" with "secret"
-	local xorKey = "secret"
+	-- Key is "pixel", XOR'ed with "safe"
+	local encryptedKey = "\3\12\0\7\0"
+	local xorKey = "safe"
 
 	local g = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 	g.Name = "KeyGUI"
@@ -182,7 +215,8 @@ local function showKeyPrompt()
 	cb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 
 	sb.MouseButton1Click:Connect(function()
-		if string.lower(tb.Text) == decode(encryptedKey, xorKey) then
+		local input = string.lower(tb.Text)
+		if input == decode(encryptedKey, xorKey) then
 			g:Destroy()
 			createGUI()
 		else
