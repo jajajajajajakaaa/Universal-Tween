@@ -1,6 +1,5 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 getgenv().TweenConfig = getgenv().TweenConfig or {
@@ -11,37 +10,6 @@ getgenv().TweenConfig = getgenv().TweenConfig or {
 local pos1 = getgenv().TweenConfig.Pos1
 local pos2 = getgenv().TweenConfig.Pos2
 local tweening = false
-
-local function makeDraggable(frame)
-	local dragging, dragInput, dragStart, startPos
-
-	frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
-			end)
-		end
-	end)
-
-	frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-	end)
-end
 
 local function createGUI()
 	local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
@@ -72,9 +40,9 @@ local function createGUI()
 	mainFrame.Position = UDim2.new(0, 20, 0.5, -110)
 	mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	mainFrame.BorderSizePixel = 0
+	mainFrame.Active = true
+	mainFrame.Draggable = true
 	mainFrame.Name = "MainFrame"
-
-	makeDraggable(mainFrame)
 
 	local function createButton(name, text, posY)
 		local btn = Instance.new("TextButton", mainFrame)
@@ -161,85 +129,49 @@ local function createGUI()
 	end)
 end
 
--- Key system (XOR obfuscated)
+-- Key system
 local function showKeyPrompt()
-	local function decode(str, key)
-		local decoded = ""
-		for i = 1, #str do
-			local c = string.byte(str, i)
-			local k = string.byte(key, ((i - 1) % #key) + 1)
-			decoded = decoded .. string.char(bit32.bxor(c, k))
-		end
-		return decoded
-	end
+	local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+	gui.Name = "KeyGUI"
+	gui.ResetOnSpawn = false
 
-	-- Key is "pixel", XOR'ed with "safe"
-	local encryptedKey = "\3\12\0\7\0"
-	local xorKey = "safe"
+	local frame = Instance.new("Frame", gui)
+	frame.Size = UDim2.new(0, 300, 0, 140)
+	frame.Position = UDim2.new(0.5, -150, 0.5, -70)
+	frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	frame.BorderSizePixel = 0
 
-	local g = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-	g.Name = "KeyGUI"
-	g.ResetOnSpawn = false
+	local textBox = Instance.new("TextBox", frame)
+	textBox.Size = UDim2.new(1, -20, 0, 40)
+	textBox.Position = UDim2.new(0, 10, 0, 10)
+	textBox.PlaceholderText = "Enter Key"
+	textBox.Font = Enum.Font.Gotham
+	textBox.TextSize = 18
+	textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	textBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 
-	local f = Instance.new("Frame", g)
-	f.Size = UDim2.new(0, 300, 0, 180)
-	f.Position = UDim2.new(0.5, -150, 0.5, -90)
-	f.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-	f.BorderSizePixel = 0
+	local submitBtn = Instance.new("TextButton", frame)
+	submitBtn.Size = UDim2.new(1, -20, 0, 40)
+	submitBtn.Position = UDim2.new(0, 10, 0, 60)
+	submitBtn.Text = "Submit"
+	submitBtn.Font = Enum.Font.Gotham
+	submitBtn.TextSize = 18
+	submitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	submitBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 
-	local tb = Instance.new("TextBox", f)
-	tb.Size = UDim2.new(1, -20, 0, 40)
-	tb.Position = UDim2.new(0, 10, 0, 10)
-	tb.PlaceholderText = "Enter Key"
-	tb.Font = Enum.Font.Gotham
-	tb.TextSize = 18
-	tb.TextColor3 = Color3.fromRGB(255, 255, 255)
-	tb.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-
-	local sb = Instance.new("TextButton", f)
-	sb.Size = UDim2.new(1, -20, 0, 40)
-	sb.Position = UDim2.new(0, 10, 0, 60)
-	sb.Text = "Submit"
-	sb.Font = Enum.Font.Gotham
-	sb.TextSize = 18
-	sb.TextColor3 = Color3.fromRGB(255, 255, 255)
-	sb.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-
-	local cb = Instance.new("TextButton", f)
-	cb.Size = UDim2.new(1, -20, 0, 30)
-	cb.Position = UDim2.new(0, 10, 0, 110)
-	cb.Text = "Copy Discord Server"
-	cb.Font = Enum.Font.Gotham
-	cb.TextSize = 14
-	cb.TextColor3 = Color3.fromRGB(255, 255, 255)
-	cb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-
-	sb.MouseButton1Click:Connect(function()
-		local input = string.lower(tb.Text)
-		if input == decode(encryptedKey, xorKey) then
-			g:Destroy()
+	submitBtn.MouseButton1Click:Connect(function()
+		if string.lower(textBox.Text) == "secret" then
+			gui:Destroy()
 			createGUI()
 		else
-			tb.Text = "Incorrect Key"
+			textBox.Text = "Incorrect Key"
 			task.wait(1)
-			tb.Text = ""
-		end
-	end)
-
-	cb.MouseButton1Click:Connect(function()
-		if setclipboard then
-			setclipboard("https://discord.gg/7tkqFr4hQf")
-			cb.Text = "Copied!"
-			task.wait(1)
-			cb.Text = "Copy Discord Server"
-		else
-			cb.Text = "Clipboard Unsupported"
-			task.wait(1.5)
-			cb.Text = "Copy Discord Server"
+			textBox.Text = ""
 		end
 	end)
 end
 
+-- Auto-load on inject and respawn
 showKeyPrompt()
 
 Players.LocalPlayer.CharacterAdded:Connect(function()
