@@ -1,0 +1,216 @@
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+getgenv().TweenConfig = getgenv().TweenConfig or {
+	Pos1 = nil,
+	Pos2 = nil
+}
+
+local pos1 = getgenv().TweenConfig.Pos1
+local pos2 = getgenv().TweenConfig.Pos2
+local tweening = false
+
+local function createGUI()
+	local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+	screenGui.Name = "TweenTool"
+	screenGui.ResetOnSpawn = false
+	screenGui.IgnoreGuiInset = true
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+	local openBtn = Instance.new("TextButton", screenGui)
+	openBtn.Size = UDim2.new(0, 120, 0, 35)
+	openBtn.Position = UDim2.new(0, 20, 0, 20)
+	openBtn.BackgroundTransparency = 0.3
+	openBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+	openBtn.Text = "Open GUI"
+	openBtn.Visible = false
+	openBtn.Name = "OpenButton"
+
+	local reloadBtn = Instance.new("TextButton", screenGui)
+	reloadBtn.Size = UDim2.new(0, 120, 0, 35)
+	reloadBtn.Position = UDim2.new(0, 150, 0, 20)
+	reloadBtn.BackgroundTransparency = 0.3
+	reloadBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+	reloadBtn.Text = "Reload GUI"
+	reloadBtn.Name = "ReloadButton"
+
+	local mainFrame = Instance.new("Frame", screenGui)
+	mainFrame.Size = UDim2.new(0, 220, 0, 220)
+	mainFrame.Position = UDim2.new(0, 20, 0.5, -110)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Active = true
+	mainFrame.Draggable = true
+	mainFrame.Name = "MainFrame"
+
+	local function createButton(name, text, posY)
+		local btn = Instance.new("TextButton", mainFrame)
+		btn.Name = name
+		btn.Size = UDim2.new(1, -20, 0, 40)
+		btn.Position = UDim2.new(0, 10, 0, posY)
+		btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		btn.Font = Enum.Font.Gotham
+		btn.TextSize = 16
+		btn.Text = text
+		return btn
+	end
+
+	local toggleBtn = createButton("Toggle", "Start Tweening", 10)
+	local save1Btn = createButton("Save1", "Save Position 1", 60)
+	local save2Btn = createButton("Save2", "Save Position 2", 110)
+	local minimizeBtn = createButton("Minimize", "Minimize GUI", 160)
+
+	local function tweenTo(position)
+		local char = player.Character or player.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		local info = TweenInfo.new(0.25, Enum.EasingStyle.Linear)
+		local goal = {CFrame = CFrame.new(position)}
+		local tween = TweenService:Create(hrp, info, goal)
+		tween:Play()
+		tween.Completed:Wait()
+	end
+
+	local function loopTween()
+		if not pos1 or not pos2 then return end
+		tweening = true
+		local toggle = true
+		while tweening do
+			tweenTo(toggle and pos1 or pos2)
+			toggle = not toggle
+		end
+	end
+
+	toggleBtn.MouseButton1Click:Connect(function()
+		if not pos1 or not pos2 then
+			toggleBtn.Text = "Set Both Positions!"
+			task.wait(1)
+			toggleBtn.Text = "Start Tweening"
+			return
+		end
+		tweening = not tweening
+		toggleBtn.Text = tweening and "Stop Tweening" or "Start Tweening"
+		if tweening then task.spawn(loopTween) end
+	end)
+
+	save1Btn.MouseButton1Click:Connect(function()
+		local hrp = (player.Character or player.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+		pos1 = hrp.Position
+		getgenv().TweenConfig.Pos1 = pos1
+		save1Btn.Text = "Position 1 Saved"
+		task.wait(1)
+		save1Btn.Text = "Save Position 1"
+	end)
+
+	save2Btn.MouseButton1Click:Connect(function()
+		local hrp = (player.Character or player.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart")
+		pos2 = hrp.Position
+		getgenv().TweenConfig.Pos2 = pos2
+		save2Btn.Text = "Position 2 Saved"
+		task.wait(1)
+		save2Btn.Text = "Save Position 2"
+	end)
+
+	minimizeBtn.MouseButton1Click:Connect(function()
+		mainFrame.Visible = false
+		openBtn.Visible = true
+	end)
+
+	openBtn.MouseButton1Click:Connect(function()
+		mainFrame.Visible = true
+		openBtn.Visible = false
+	end)
+
+	reloadBtn.MouseButton1Click:Connect(function()
+		screenGui:Destroy()
+		task.wait()
+		createGUI()
+	end)
+end
+
+-- Key system (XOR obfuscated)
+local function showKeyPrompt()
+	local decode = function(str, key)
+		local decoded = ""
+		for i = 1, #str do
+			local c = string.byte(str, i)
+			local k = string.byte(key, ((i - 1) % #key) + 1)
+			decoded = decoded .. string.char(bit32.bxor(c, k))
+		end
+		return decoded
+	end
+
+	local encryptedKey = "\27\10\12\00\00" -- XOR of "pixel" with "secret"
+	local xorKey = "secret"
+
+	local g = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+	g.Name = "KeyGUI"
+	g.ResetOnSpawn = false
+
+	local f = Instance.new("Frame", g)
+	f.Size = UDim2.new(0, 300, 0, 180)
+	f.Position = UDim2.new(0.5, -150, 0.5, -90)
+	f.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	f.BorderSizePixel = 0
+
+	local tb = Instance.new("TextBox", f)
+	tb.Size = UDim2.new(1, -20, 0, 40)
+	tb.Position = UDim2.new(0, 10, 0, 10)
+	tb.PlaceholderText = "Enter Key"
+	tb.Font = Enum.Font.Gotham
+	tb.TextSize = 18
+	tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tb.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+
+	local sb = Instance.new("TextButton", f)
+	sb.Size = UDim2.new(1, -20, 0, 40)
+	sb.Position = UDim2.new(0, 10, 0, 60)
+	sb.Text = "Submit"
+	sb.Font = Enum.Font.Gotham
+	sb.TextSize = 18
+	sb.TextColor3 = Color3.fromRGB(255, 255, 255)
+	sb.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+
+	local cb = Instance.new("TextButton", f)
+	cb.Size = UDim2.new(1, -20, 0, 30)
+	cb.Position = UDim2.new(0, 10, 0, 110)
+	cb.Text = "Copy Discord Server"
+	cb.Font = Enum.Font.Gotham
+	cb.TextSize = 14
+	cb.TextColor3 = Color3.fromRGB(255, 255, 255)
+	cb.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+
+	sb.MouseButton1Click:Connect(function()
+		if string.lower(tb.Text) == decode(encryptedKey, xorKey) then
+			g:Destroy()
+			createGUI()
+		else
+			tb.Text = "Incorrect Key"
+			task.wait(1)
+			tb.Text = ""
+		end
+	end)
+
+	cb.MouseButton1Click:Connect(function()
+		if setclipboard then
+			setclipboard("https://discord.gg/7tkqFr4hQf")
+			cb.Text = "Copied!"
+			task.wait(1)
+			cb.Text = "Copy Discord Server"
+		else
+			cb.Text = "Clipboard Unsupported"
+			task.wait(1.5)
+			cb.Text = "Copy Discord Server"
+		end
+	end)
+end
+
+showKeyPrompt()
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+	task.wait(1)
+	if not player.PlayerGui:FindFirstChild("TweenTool") then
+		createGUI()
+	end
+end)
